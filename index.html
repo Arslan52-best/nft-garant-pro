@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NFT ГАРАНТ PRO</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --accent: #3b82f6; --bg: #0b0f1a; --glass: rgba(255, 255, 255, 0.03); --border: rgba(255, 255, 255, 0.08); --error: #ef4444; --success: #10b981; --warning: #f59e0b; --admin: #8b5cf6; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; margin: 0; overflow: hidden; -webkit-user-select: none; }
+        .screen { display: none; width: 100%; height: 100vh; padding: 25px; box-sizing: border-box; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent); }
+        .active { display: flex; }
+        .profile-card { background: var(--glass); border: 1px solid var(--border); padding: 30px; border-radius: 35px; width: 100%; max-width: 320px; backdrop-filter: blur(20px); text-align: center; margin-bottom: 25px; }
+        .avatar-main { width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--accent); margin-bottom: 15px; object-fit: cover; }
+        .vs-container { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 15px; gap: 15px; }
+        .p-card { flex: 1; background: var(--glass); border: 1px solid var(--border); padding: 20px 10px; border-radius: 25px; text-align: center; position: relative; }
+        .p-avatar { width: 55px; height: 55px; border-radius: 50%; border: 2px solid var(--accent); margin-bottom: 8px; object-fit: cover; }
+        .p-name { font-size: 11px; font-weight: 800; overflow: hidden; white-space: nowrap; }
+        .p-tag { font-size: 9px; color: var(--accent); opacity: 0.8; margin-top: 2px; }
+        .online-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; position: absolute; top: 15px; right: 15px; box-shadow: 0 0 10px var(--success); display: none; }
+        .btn-main { width: 100%; padding: 20px; background: var(--accent); border: none; border-radius: 20px; color: white; font-weight: 800; font-size: 16px; margin-top: 10px; cursor: pointer; transition: 0.3s; box-shadow: 0 10px 20px rgba(59, 130, 246, 0.2); }
+        .btn-main:active { transform: scale(0.96); }
+        .warning-box { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 15px; border-radius: 20px; margin-bottom: 15px; width: 100%; }
+        input { width: 100%; background: none; border: none; border-bottom: 1px solid var(--border); color: white; padding: 12px 0; font-size: 16px; margin-bottom: 10px; outline: none; }
+        .status-text { font-size: 11px; font-weight: 600; color: var(--accent); margin-top: 15px; text-align: center; line-height: 1.4; }
+        
+        /* СТИЛЬ АДМИНА */
+        .admin-card { display: none; width: 100%; background: rgba(139, 92, 246, 0.1); border: 1px solid var(--admin); padding: 10px; border-radius: 15px; text-align: center; margin-bottom: 15px; }
+        .admin-text { color: var(--admin); font-size: 10px; font-weight: 800; letter-spacing: 1px; }
+        .admin-panel { display: none; width: 100%; margin-top: 20px; padding-top: 10px; border-top: 1px solid var(--border); }
+        .btn-admin { padding: 10px; font-size: 10px; border-radius: 10px; border: none; color: white; font-weight: bold; width: 30%; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="main_screen" class="screen active">
+        <div class="profile-card">
+            <img id="u_pic" src="" class="avatar-main" onerror="this.src='https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff'">
+            <h1 id="u_name" style="margin:0; font-size:24px;"></h1>
+            <span id="u_tag" style="font-size:13px; color:var(--accent); opacity:0.8;"></span>
+        </div>
+        <button class="btn-main" onclick="openCreate()">🛠 СОЗДАТЬ СДЕЛКУ</button>
+        <button class="btn-main" onclick="openHistory()" style="background: #1f2937; margin-top: 10px;">📋 МОИ СДЕЛКИ</button>
+        <button class="btn-main" style="background: var(--glass); border: 1px solid var(--border); font-size: 13px; color: rgba(255,255,255,0.6);" onclick="tg.openTelegramLink('https://t.me/nftgarantsup_bot')">👨‍💻 ТЕХПОДДЕРЖКА</button>
+    </div>
+
+    <div id="create_screen" class="screen">
+        <h2 style="margin-bottom: 20px; font-weight: 800;">НОВЫЙ ЛОТ</h2>
+        <div class="deal-card" style="background: var(--glass); border-radius: 28px; padding: 25px; border: 1px solid var(--border); margin-bottom: 15px; width: 100%;">
+            <input type="url" id="nft_url" placeholder="Ссылка t.me/nft/...">
+            <input type="number" id="price" placeholder="Цена (USDT)">
+        </div>
+        <button id="form_btn" class="btn-main" onclick="createDeal()">✨ СФОРМИРОВАТЬ</button>
+        <div id="res_box" style="display:none; width: 100%; margin-top: 15px;">
+            <button class="btn-main" style="background:var(--success);" onclick="copyAndEnter()">✅ КОПИРОВАТЬ И ВОЙТИ</button>
+        </div>
+        <button onclick="nav('main_screen')" style="background:none; border:none; color:gray; margin-top:20px; font-weight: 800;">Назад</button>
+    </div>
+    
+    <div id="history_screen" class="screen" style="justify-content: flex-start; padding-top: 20px;">
+        <h2 style="margin-bottom: 15px; font-weight: 800; flex-shrink: 0;">📋 МОИ СДЕЛКИ</h2>
+        <div id="history_list" style="width: 100%; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 80px;">
+            <div style="text-align:center; color:gray;">Загрузка...</div>
+        </div>
+        <button onclick="nav('main_screen')" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1f2937; border: none; color: white; padding: 12px 40px; border-radius: 20px; font-weight: 800; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 100;">НАЗАД</button>
+    </div>
+
+    <div id="room_screen" class="screen">
+        <div class="vs-container">
+            <div class="p-card">
+                <div id="s_online" class="online-dot"></div>
+                <img id="s_pic" src="" class="p-avatar">
+                <div class="p-name" id="s_name_disp">...</div>
+                <div class="p-tag" id="s_tag_disp"></div> </div>
+            <div style="font-weight: 800; opacity: 0.2;">VS</div>
+            <div class="p-card">
+                <div id="b_online" class="online-dot"></div>
+                <img id="b_pic" src="https://ui-avatars.com/api/?name=?&background=222" class="p-avatar">
+                <div class="p-name" id="b_name_disp">Ожидание...</div>
+                <div class="p-tag" id="b_tag_disp"></div> </div>
+        </div>
+        
+        <div id="admin_seat" class="admin-card">
+            <div class="admin-text">⚖️ АРБИТР В КОМНАТЕ</div>
+        </div>
+
+        <div class="deal-card" style="background: var(--glass); border-radius: 28px; padding: 25px; border: 1px solid var(--border); margin-bottom: 15px; text-align: center; width: 100%;">
+            <h3 id="r_model" style="font-size: 22px; font-weight: 800; margin: 0;"></h3>
+            <p style="color: var(--success); font-weight: 800; font-size: 24px; margin: 10px 0;"><span id="r_amount"></span> USDT</p>
+        </div>
+        
+        <div class="warning-box" id="v_warn"><p style="color: var(--warning); font-size: 10px; font-weight: 800; text-align: center; margin: 0;">🎥 ВНИМАНИЕ: ЗАПИСЫВАЙТЕ ЭКРАН ПЕРЕДАЧИ!</p></div>
+        <div id="buyer_instruction" class="warning-box" style="display:none;"><p id="inst_text" style="font-size: 10px; opacity: 0.8; margin: 0; line-height: 1.4;"></p></div>
+
+        <div id="action_area" style="width: 100%;"></div>
+        <button id="pay_btn_fixed" class="btn-main" onclick="payNowReal()" style="display:none; background:var(--accent);">💳 ОПЛАТИТЬ СДЕЛКУ</button>
+        <div id="status_info" class="status-text"></div>
+        
+        <div id="admin_control_panel" class="admin-panel">
+            <div style="text-align: center; font-size: 9px; opacity: 0.5; margin-bottom: 5px;">ПАНЕЛЬ АРБИТРА</div>
+            <div style="display: flex; justify-content: space-between; gap: 5px;">
+                <button class="btn-admin" style="background: var(--success);" onclick="forceAction('completed')">ВЫПЛАТИТЬ</button>
+                <button class="btn-admin" style="background: var(--error);" onclick="forceAction('refunded')">ВЕРНУТЬ</button>
+                <button class="btn-admin" style="background: gray;" onclick="forceAction('cancelled')">ОТМЕНА</button>
+            </div>
+        </div>
+
+        <button id="exit_btn_fixed" onclick="exitDeal()" style="background:none; border:none; color:gray; font-size:11px; margin-top:20px; font-weight: 800;">Покинуть сделку</button>
+    </div>
+
+    <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    const ADMIN_ID = 8255489825; // ТВОЙ ID
+    const user = tg.initDataUnsafe.user || {id: 0, first_name: "Guest", username: ""};
+
+    // 1. Инициализация
+    localStorage.removeItem('last_deal'); 
+    let activeId = tg.initDataUnsafe.start_param || null; 
+    let syncInterval = null;
+    let cAmt = 0; let cMdl = "";
+    let lastRenderedStatus = null; 
+
+    // 2. Профиль
+    document.getElementById('u_name').innerText = user.first_name;
+    document.getElementById('u_tag').innerText = user.username ? '@' + user.username : 'ID: ' + user.id;
+    if(user.photo_url) document.getElementById('u_pic').src = user.photo_url;
+
+    // --- НАВИГАЦИЯ ---
+    function nav(id) {
+        const screen = document.getElementById(id);
+        if (screen.classList.contains('active')) return; 
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        screen.classList.add('active');
+    }
+
+    function openCreate() {
+        document.getElementById('nft_url').value = ''; 
+        document.getElementById('price').value = '';
+        document.getElementById('res_box').style.display = 'none'; 
+        document.getElementById('form_btn').style.display = 'block';
+        nav('create_screen');
+    }
+
+    // --- СОЗДАНИЕ ---
+    async function createDeal() {
+        const btn = document.getElementById('form_btn'); 
+        const nftInput = document.getElementById('nft_url');
+        const priceInput = document.getElementById('price');
+        
+        let nftUrl = nftInput.value.trim();
+        const price = parseFloat(priceInput.value);
+
+        if (nftUrl.startsWith('t.me')) nftUrl = 'https://' + nftUrl;
+        if (nftUrl.startsWith('fragment.com')) nftUrl = 'https://' + nftUrl;
+
+        if (!nftUrl.includes('t.me/nft/') && !nftUrl.includes('fragment.com/nft/')) {
+            tg.showAlert("❌ Ошибка: Введите корректную ссылку на NFT"); return;
+        }
+        if (isNaN(price) || price < 2) {
+            tg.showAlert("❌ Ошибка: Минимальная сумма сделки — 2 USDT"); return;
+        }
+
+        btn.innerText = "⏳ ФОРМИРУЮ..."; 
+        btn.disabled = true;        
+        btn.style.opacity = "0.7";  
+
+        try {
+            const res = await fetch('/api/create_deal', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    seller_id: user.id, seller_name: user.first_name, seller_username: user.username,
+                    seller_photo: user.photo_url, nft_url: nftUrl, price: price
+                })
+            });
+            const r = await res.json();
+            
+            if (r.status === "ok") {
+                activeId = r.share_url.split('=')[1];
+                btn.style.display = 'none'; 
+                document.getElementById('res_box').style.display = 'block';
+            } else {
+                tg.showAlert(r.message || "Ошибка при создании лота");
+                btn.innerText = "СФОРМИРОВАТЬ";
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            }
+        } catch(e) {
+            tg.showAlert("Ошибка связи с сервером");
+            btn.innerText = "ПОПРОБОВАТЬ СНОВА";
+            btn.disabled = false;
+            btn.style.opacity = "1";
+        }
+    }
+
+    function copyAndEnter() {
+        const url = `https://t.me/nftgarant2_bot/app?startapp=${activeId}`;
+        const el = document.createElement('textarea'); 
+        el.value = url; el.style.position = 'absolute'; el.style.left = '-9999px';
+        document.body.appendChild(el); el.select(); document.execCommand('copy'); 
+        document.body.removeChild(el);
+        
+        tg.showAlert("Ссылка скопирована! Переход в комнату...");
+        startSync(activeId);
+    }
+
+    // --- СИНХРОНИЗАЦИЯ (ROOM) ---
+    async function startSync(id) {
+        if(syncInterval) clearInterval(syncInterval);
+        nav('room_screen'); 
+        
+        // 🔥 ПОКАЗЫВАЕМ ПАНЕЛЬ АДМИНА
+        if (user.id === ADMIN_ID) {
+            document.getElementById('admin_control_panel').style.display = 'block';
+        }
+
+        const pulse = async () => {
+            if(!activeId) return;
+            try {
+                const res = await fetch(`/api/get_deal/${id}`);
+                const d = await res.json();
+                if(d.status === "error") { exitDeal(); return; }
+                
+                // ПУЛЬС
+                const pulseRes = await fetch(`/api/pulse/${id}`, { 
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id: user.id, name: user.first_name, username: user.username, photo: user.photo_url, 
+                        role: (user.id === d.seller_id ? 'seller' : 'buyer')
+                    })
+                });
+                const pulseData = await pulseRes.json();
+                
+                // Админу никогда не откажет, но обычным юзерам - да
+                if (pulseData.status === "occupied" && user.id !== ADMIN_ID) {
+                    tg.showAlert("⚠️ Место занято!");
+                    exitDeal(); return;
+                }
+
+                // UI ДАННЫЕ
+                document.getElementById('r_model').innerText = d.model; 
+                document.getElementById('r_amount').innerText = d.amount;
+                cAmt = d.amount; cMdl = d.model;
+                
+                // ПРОДАВЕЦ
+                document.getElementById('s_name_disp').innerText = d.seller_name;
+                document.getElementById('s_tag_disp').innerText = d.seller_username ? '@'+d.seller_username : '';
+                if(d.seller_photo) document.getElementById('s_pic').src = d.seller_photo;
+                document.getElementById('s_online').style.display = d.s_online ? 'block' : 'none';
+                
+                // ПОКУПАТЕЛЬ
+                if(d.buyer_id) {
+                    document.getElementById('b_name_disp').innerText = d.buyer_name;
+                    document.getElementById('b_tag_disp').innerText = d.buyer_username ? '@'+d.buyer_username : '';
+                    if(d.buyer_photo) document.getElementById('b_pic').src = d.buyer_photo;
+                    document.getElementById('b_online').style.display = d.b_online ? 'block' : 'none';
+                }
+
+                // 🔥 ТРЕТЬЕ МЕСТО (ВИЗУАЛ)
+                if (d.a_online) {
+                    document.getElementById('admin_seat').style.display = 'block';
+                } else {
+                    document.getElementById('admin_seat').style.display = 'none';
+                }
+
+                // --- 👑 УМНЫЙ ТАЙМЕР ---
+                const timerDiv = document.getElementById('universal_timer') || document.createElement('div');
+                if (!document.getElementById('universal_timer')) {
+                    timerDiv.id = 'universal_timer';
+                    timerDiv.style = "text-align:center; margin-bottom:15px; font-weight:800; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3);";
+                    const card = document.querySelector('#room_screen .deal-card'); 
+                    if(card) card.parentNode.insertBefore(timerDiv, card);
+                }
+
+                const now = Math.floor(Date.now() / 1000);
+                let timeText = "";
+                let timeLeft = 0;
+                let showTimer = false;
+                let timerColor = "#fbbf24"; 
+
+                // 1. ОПЛАТА (5 мин)
+                if (['created', 'confirmed', 'waiting_payment'].includes(d.status)) {
+                    if (d.buyer_joined_at) { 
+                        timeLeft = (d.buyer_joined_at + 300) - now;
+                        if (timeLeft > 0) {
+                            showTimer = true; timeText = `⏱ Оплата: ${fmtTime(timeLeft)}`;
+                        } else {
+                            showTimer = true; timeText = "⛔️ ВРЕМЯ ВЫШЛО. ОТМЕНА..."; timerColor = "#ef4444";
+                            if(d.status !== 'cancelled') location.reload(); 
+                        }
+                    } else {
+                        showTimer = true; timeText = "⏳ Ожидаем входа покупателя..."; timerColor = "#9ca3af";
+                    }
+                }
+                // 2. ПЕРЕДАЧА (7.5 мин)
+                else if (d.status === 'paid') {
+                    timeLeft = (d.paid_at + 450) - now;
+                    if (timeLeft > 0) {
+                        showTimer = true; timeText = `📦 Продавец должен передать за: ${fmtTime(timeLeft)}`;
+                    } else {
+                        showTimer = true; timeText = "⛔️ ПРОДАВЕЦ НЕ УСПЕЛ. ВОЗВРАТ..."; timerColor = "#ef4444";
+                    }
+                }
+                // 3. ПОДТВЕРЖДЕНИЕ (6 мин)
+                else if (d.status === 'shipped') {
+                    timeLeft = (d.shipped_at + 360) - now;
+                    if (timeLeft > 0) {
+                        showTimer = true; timeText = `✅ Подтвердите получение за: ${fmtTime(timeLeft)}`;
+                    } else {
+                        showTimer = true; timeText = "⚠️ СПОР ОТКРЫВАЕТСЯ..."; timerColor = "#ef4444";
+                    }
+                }
+
+                if (showTimer) {
+                    timerDiv.innerHTML = timeText; timerDiv.style.color = timerColor; timerDiv.style.borderColor = timerColor; timerDiv.style.display = 'block';
+                } else { timerDiv.style.display = 'none'; }
+
+                // UI КНОПКИ
+                const area = document.getElementById('action_area'); 
+                const info = document.getElementById('status_info');
+                const inst = document.getElementById('buyer_instruction'); 
+                const payBtn = document.getElementById('pay_btn_fixed');
+                const exitBtn = document.getElementById('exit_btn_fixed');
+                const isS = user.id === d.seller_id; 
+                const isA = user.id === ADMIN_ID;
+
+                if (d.status !== lastRenderedStatus) {
+                    lastRenderedStatus = d.status;
+                    area.innerHTML = ""; 
+                    payBtn.style.display = 'none';
+                    if (['paid', 'shipped', 'disputed'].includes(d.status)) exitBtn.style.display = 'none';
+                    else exitBtn.style.display = 'block';
+
+                    if(isA) {
+                         // АДМИН ВИДИТ СТАТУС НО УПРАВЛЯЕТ ЧЕРЕЗ ПАНЕЛЬ
+                         info.innerText = `СТАТУС: ${d.status.toUpperCase()}`;
+                    }
+                    else if(isS) { // ПРОДАВЕЦ
+                        inst.style.display = 'none';
+                        if(!d.buyer_id) info.innerText = "";
+                        else if(['created','confirmed','waiting_payment'].includes(d.status)) info.innerText = "Ждем оплату...";
+                        else if(d.status === 'paid') {
+                            info.innerHTML = "✅ <b>Оплачено!</b> Отправьте товар и нажмите кнопку.";
+                            area.innerHTML = `<button class="btn-main" onclick="updateStatus('shipped')" style="background:var(--accent);">🚀 Я ПЕРЕДАЛ NFT</button>`;
+                        } 
+                        else if(d.status === 'shipped') info.innerText = "Ждем подтверждения покупателя...";
+                        else if(d.status === 'completed') { info.innerHTML = "<h2 style='color:var(--success);'>✅ ЗАВЕРШЕНО</h2>"; area.innerHTML = `<button class="btn-main" onclick="exitDeal()">ВЫЙТИ</button>`; }
+                        else if(d.status === 'disputed') info.innerHTML = "<h2 style='color:var(--error);'>⚠️ СПОР</h2>";
+                    } 
+                    else { // ПОКУПАТЕЛЬ
+                        if(d.status === 'created') {
+                            inst.style.display = 'block'; 
+                            document.getElementById('inst_text').innerText = "Проверьте ссылку. Если всё ок — жмите ПРОДОЛЖИТЬ.";
+                            area.innerHTML = `<button class="btn-main" onclick="window.Telegram.WebApp.openLink('${d.nft_url}')" style="background:#1f2937; margin-bottom:10px;">🔍 ПРОВЕРИТЬ NFT</button>
+                                <div style="display:flex; gap:10px;"><button class="btn-main" onclick="updateStatus('confirmed')" style="background:var(--success); flex:2;">ПРОДОЛЖИТЬ</button><button class="btn-main" onclick="updateStatus('cancelled')" style="background:var(--error); flex:1;">ОТМЕНА</button></div>`;
+                        } else if(d.status === 'confirmed' || d.status === 'waiting_payment') { 
+                            inst.style.display = 'none'; area.innerHTML = ""; payBtn.style.display = 'block'; 
+                            info.innerText = "Оплатите счет";
+                        }
+                        else if(d.status === 'paid') { inst.style.display = 'none'; info.innerText = "Ждем отправку NFT..."; }
+                        else if(d.status === 'shipped') {
+                            inst.style.display = 'block'; document.getElementById('inst_text').innerText = "Вам передали NFT?";
+                            area.innerHTML = `<div style="display:flex; gap:10px;"><button class="btn-main" onclick="updateStatus('completed')" style="background:var(--success); flex:2;">ДА, ПОЛУЧИЛ</button><button class="btn-main" onclick="updateStatus('disputed')" style="background:var(--error); flex:1;">НЕТ</button></div>`;
+                        } else if(d.status === 'completed' || d.status === 'refunded') {
+                             info.innerHTML = "<h2 style='color:var(--success);'>ГОТОВО</h2>"; area.innerHTML = `<button class="btn-main" onclick="exitDeal()">ВЫЙТИ</button>`;
+                        }
+                    }
+                }
+            } catch(e) { console.log(e); }
+        };
+
+        function fmtTime(s) {
+            const m = Math.floor(s / 60);
+            const sec = s % 60;
+            return `${m}:${sec < 10 ? '0'+sec : sec}`;
+        }
+
+        pulse(); syncInterval = setInterval(pulse, 3000);
+    }
+
+    async function updateStatus(s) {
+        if(['shipped','completed','disputed','refunded'].includes(s)) {
+            if(!confirm("Вы уверены? Это действие нельзя отменить.")) return;
+        }
+        performAction(s);
+    }
+
+    // 🔥 АДМИНСКАЯ ФУНКЦИЯ (без подтверждений)
+    async function forceAction(s) {
+        performAction(s);
+    }
+
+    async function performAction(s) {
+        try {
+            const res = await fetch(`/api/action/${activeId}`, { 
+                method: 'POST', headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({status: s}) 
+            });
+            const r = await res.json();
+            if(r.status === "ok") {
+                if(s === 'cancelled' || s === 'refunded') exitDeal(); 
+            } else { tg.showAlert(r.message || "Ошибка"); }
+        } catch(e) { tg.showAlert("Ошибка связи"); }
+    }
+
+    async function payNowReal() {
+        try {
+            const res = await fetch('/api/pay_deal', { 
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: activeId, amount: cAmt, model: cMdl})
+            });
+            const r = await res.json();
+            if(r.status === "ok") tg.openTelegramLink(r.pay_url);
+            else tg.showAlert("Ошибка создания счета");
+        } catch(e) { tg.showAlert("Ошибка связи с сервером оплаты"); }
+    }
+
+    function exitDeal() {
+        if (['completed', 'refunded', 'cancelled'].includes(lastRenderedStatus)) {
+            if(syncInterval) clearInterval(syncInterval);
+            activeId = null;
+            localStorage.removeItem('last_deal'); 
+            nav('main_screen');
+            return;
+        }
+        if (activeId && !confirm("Вы уверены, что хотите выйти? Сделка останется активной.")) return;
+        if(syncInterval) clearInterval(syncInterval);
+        activeId = null;
+        localStorage.removeItem('last_deal'); 
+        nav('main_screen'); 
+    }
+
+    if(activeId) { startSync(activeId); } else { nav('main_screen'); }
+
+    async function openHistory() {
+        nav('history_screen');
+        const list = document.getElementById('history_list');
+        list.innerHTML = '<div style="text-align:center; margin-top:20px;">🔄 Загружаем данные...</div>';
+
+        try {
+            const res = await fetch(`/api/my_deals/${user.id}`);
+            const data = await res.json();
+            
+            if (!data.deals || data.deals.length === 0) {
+                list.innerHTML = '<div style="text-align:center; color:gray; margin-top:50px;">Пока нет сделок 🤷‍♂️</div>';
+                return;
+            }
+
+            let html = '';
+            data.deals.forEach(d => {
+                let color = '#3b82f6'; 
+                if(['completed', 'shipped'].includes(d.status_code)) color = '#10b981'; 
+                if(['cancelled', 'refunded', 'disputed'].includes(d.status_code)) color = '#ef4444'; 
+                if(d.status_code === 'paid') color = '#f59e0b'; 
+
+                html += `
+                <div onclick="openDeal('${d.id}')" style="background: var(--glass); border: 1px solid var(--border); padding: 15px; border-radius: 20px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 800; margin-bottom: 4px;">${d.model}</div>
+                        <div style="font-size: 11px; opacity: 0.6;">${d.role} • ${d.amount} USDT</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 11px; font-weight: 800; color: ${color}; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 8px;">
+                            ${d.status_text}
+                        </div>
+                    </div>
+                </div>`;
+            });
+            list.innerHTML = html;
+
+        } catch(e) {
+            list.innerHTML = '<div style="text-align:center; color:var(--error);">Ошибка загрузки :(</div>';
+        }
+    }
+
+    function openDeal(id) {
+        activeId = id;
+        startSync(id); 
+    }
+</script>
+</body>
+</html>
