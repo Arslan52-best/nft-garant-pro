@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+aiogram
+aiocryptopay
+aiosqlite
+httpx
